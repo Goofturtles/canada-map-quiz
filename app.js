@@ -1,4 +1,4 @@
-// Canada map check-in: Study, Practice and Mock test on one map.
+// Canada map check-in: Study, Practice, Place and Mock test on one map.
 (() => {
 'use strict';
 
@@ -155,6 +155,11 @@ const zoom = d3.zoom().clickDistance(5).scaleExtent([1, 14]).translateExtent([[-
     root.attr('transform', e.transform);
     placeMarkers();
   });
+// The pin marks the spot he chooses in Place mode. pin = { xy (drawing units), lonlat, slackKm } or null.
+const pinMark = root.append('g').attr('class', 'pin');
+pinMark.append('circle').attr('r', 9);
+pinMark.append('path').attr('d', 'M-4,0H4M0,-4V4');
+let pin = null;
 let markers = gMarkers.selectAll('g');
 let watching = null;   // the point a 'near' view is following, so it can be re-centred when the screen changes size
 // Map moves are animated, unless the device is set to reduce motion.
@@ -210,6 +215,7 @@ function placeMarkers() {
   const fit = Math.min(node.clientWidth / W, node.clientHeight / H) || 1;
   const k = 1 / (d3.zoomTransform(node).k * fit);
   markers.attr('transform', d => `translate(${d.xy[0]},${d.xy[1]}) scale(${k})`);
+  if (pin) pinMark.attr('transform', `translate(${pin.xy[0]},${pin.xy[1]}) scale(${k})`);
   placeLabels();
 }
 
@@ -385,6 +391,7 @@ function options(it) {
 }
 
 function showQuestion() {
+  if (mode === 'place') return showPlace();
   answered = false;
   const body = store.typing
     ? `<form id="answer"><input id="typed" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type the name" aria-label="Your answer"><button class="primary">Check</button></form>
@@ -396,15 +403,20 @@ function showQuestion() {
   if (store.typing) $('#typed').focus();
 }
 
+// Count an answer for the round, and bring a missed point back in a few questions.
+function settle(right) {
+  answered = true;
+  if (!right) {
+    round.missed.add(cur);
+    queue.splice(Math.min(queue.length, 3), 0, cur);
+  } else if (!round.missed.has(cur)) round.firstTry++;
+}
+
 // verdict: what judge() said for a typed answer; 'right' or 'wrong' for a multiple-choice pick.
 function answer(given, verdict) {
   if (answered) return;
-  answered = true;
   const right = earns(verdict);
-  if (!right) {
-    round.missed.add(cur);
-    queue.splice(Math.min(queue.length, 3), 0, cur);   // comes back in a few questions
-  } else if (!round.missed.has(cur)) round.firstTry++;
+  settle(right);
   if (store.typing || !right) record(cur, right);
 
   const onward = queue.length ? 'Next' : 'Finish';
@@ -442,6 +454,127 @@ function roundDone() {
   paint(missed.map(it => ({ it, cls: 'named wrong', say: it.name })));
   spotlight(null);
   wholeMap();
+}
+
+// ── Place ────────────────────────────────────────────────────────────────────
+// The other way round from Practice: a question in words, and he names the thing and puts it on the map himself.
+// It runs on the same round as Practice (startRound, nextQuestion, roundDone); only the question card differs.
+
+const kmBetween = (a, b) => d3.geoDistance(a, b) * 6371;
+// One unit of the drawing in km, measured across the middle of the map. The projection keeps it nearly constant.
+const KM_PER_UNIT = kmBetween(projection.invert([W / 2 - 50, H / 2]), projection.invert([W / 2 + 50, H / 2])) / 100;
+// How far off (km) a spot may be and still count, where being inside an outline doesn't settle it.
+const NEAR_KM = { province: 40, country: 60, lake: 40, island: 60, capital: 120, city: 120, river: 70 };
+// Oceans, seas, bays, gulfs and straits have no outline at all: each has a `reach` in data.js instead.
+const SALT = ITEMS.filter(it => catOf(it).pool === 'salt');
+
+function renderPlace() {
+  panel.innerHTML = catsHtml() + '<div id="card"></div>';
+  startRound(selected());
+}
+
+function setPin(xy) {
+  const node = svg.node(), fit = Math.min(node.clientWidth / W, node.clientHeight / H) || 1;
+  // slackKm: nobody can point more exactly than about 14 px, so that much error is forgiven at the current zoom.
+  pin = xy && { xy, lonlat: projection.invert(xy), slackKm: 14 / (d3.zoomTransform(node).k * fit) * KM_PER_UNIT };
+  pinMark.attr('class', pin ? 'pin show' : 'pin');
+  placeMarkers();
+}
+
+function showPlace() {
+  answered = false;
+  setPin(null);
+  $('#card').innerHTML = `<p class="meta">${queue.length + 1} to go</p><h2 class="ask">${esc(cur.q)}</h2>
+    <form id="answer"><input id="typed" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type its name" aria-label="Its name"><button class="primary">Check</button></form>
+    <p class="tip" id="where">Then click the map where it is.</p>
+    <button type="button" class="link" id="skip">I don't know</button>
+    <div id="feedback" aria-live="polite"></div>`;
+  paint([]);
+  spotlight(null);
+  svg.classed('placing', true);
+  $('#typed').focus();
+}
+
+// The outline that counts as "on it": the province, country or lake itself, or for an island the one piece of
+// land its point sits on. Cities, rivers and open water have none.
+function outline(it) {
+  if (it.cat === 'province') return MAP.provinces.find(p => p.code === it.shape).geometry;
+  if (it.cat === 'country') return MAP.countries.find(c => c.id === it.shape).geometry;
+  if (it.cat === 'lake') return MAP.lakes.find(l => l.name === it.shape).geometry;
+  if (it.cat !== 'island') return null;
+  for (const p of MAP.provinces) {
+    const pieces = p.geometry.type === 'MultiPolygon' ? p.geometry.coordinates : [p.geometry.coordinates];
+    const mainland = ITEMS.find(o => o.shape === p.code).pt;
+    for (const coordinates of pieces) {
+      const piece = { type: 'Polygon', coordinates };
+      // Manitoulin is not a separate piece in the map data (it is a gap in the lake), so the piece its point is
+      // on is all of mainland Ontario. That is no use as an outline, and it falls back to its reach.
+      if (d3.geoContains(piece, it.pt)) return d3.geoContains(piece, mainland) ? null : piece;
+    }
+  }
+  return null;
+}
+
+// km from a spot on the drawing to the nearest stretch of a listed river.
+function riverKm(it, [x, y]) {
+  let best = Infinity;
+  for (const line of RIVERS[it.shape]) {
+    const pts = line.map(projection);
+    for (let i = 1; i < pts.length; i++) {
+      const [ax, ay] = pts[i - 1], dx = pts[i][0] - ax, dy = pts[i][1] - ay;
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
+      best = Math.min(best, Math.hypot(x - ax - t * dx, y - ay - t * dy));
+    }
+  }
+  return best * KM_PER_UNIT;
+}
+
+// Is the spot on water, or within pointing error of it? A lake counts as water: Georgian Bay is part of one.
+function onWater(spot) {
+  const land = lonlat => [...MAP.provinces, ...MAP.countries].some(s => d3.geoContains(s.geometry, lonlat))
+    && !MAP.lakes.some(l => d3.geoContains(l.geometry, lonlat));
+  const r = spot.slackKm / KM_PER_UNIT;
+  const around = d3.range(8).map(i => [spot.xy[0] + r * Math.cos(i * Math.PI / 4), spot.xy[1] + r * Math.sin(i * Math.PI / 4)]);
+  return [spot.xy, ...around].some(xy => !land(projection.invert(xy)));
+}
+
+// Did he put it in the right place?
+function placedRight(it, spot) {
+  if (SALT.includes(it)) {
+    // Open water: within its reach, on water, and no other sea, bay or strait is a better fit for that spot.
+    const share = o => Math.max(0, kmBetween(spot.lonlat, o.pt) - (o === it ? spot.slackKm : 0)) / o.reach;
+    return share(it) <= 1 && SALT.every(o => o === it || share(o) >= share(it)) && onWater(spot);
+  }
+  const far = it.cat === 'river' ? riverKm(it, spot.xy) : kmBetween(spot.lonlat, it.pt);
+  const shape = outline(it);
+  if (it.part) return d3.geoContains(shape, spot.lonlat) && far <= it.part;
+  return (shape && d3.geoContains(shape, spot.lonlat)) || far <= Math.max(spot.slackKm, it.reach || NEAR_KM[it.cat]);
+}
+
+function checkPlace(typed) {
+  if (typed && pin) return answerPlace(typed, earns(judge(cur, typed)), placedRight(cur, pin));
+  $('#feedback').innerHTML = `<p class="tip">${typed ? 'Now click the map where it is.' : pin ? 'Now type its name.' : 'Type its name, and click the map where it is.'}</p>`;
+}
+
+// typed is empty when he gave up ("I don't know").
+function answerPlace(typed, nameRight, placeRight) {
+  if (answered) return;
+  const right = nameRight && placeRight;
+  settle(right);
+  record(cur, right);
+  svg.classed('placing', false);
+  $('#skip').disabled = true;
+  $('#where').remove();
+  $('#answer button').textContent = queue.length ? 'Next' : 'Finish';
+  const wrote = ` You wrote “${esc(typed)}”`;
+  const verdict = !typed ? 'Here it is' : right ? 'Correct: right name, right place'
+    : nameRight ? 'Right name, wrong place.' : placeRight ? 'Right place, wrong name.' + wrote : 'Not quite.' + wrote;
+  $('#feedback').innerHTML = `<p class="verdict ${right ? 'right' : 'wrong'}">${verdict}</p>${answerHtml(cur)}`;
+  if (pin) pinMark.classed(placeRight ? 'ok' : 'off', true);
+  paint([{ it: cur, cls: 'named ' + (right ? 'right' : 'wrong'), say: cur.name }]);
+  spotlight(cur);
+  $('#typed').focus();
+  $('#feedback').scrollIntoView({ block: 'nearest' });
 }
 
 // ── Mock test ────────────────────────────────────────────────────────────────
@@ -530,7 +663,7 @@ function handIn() {
 
 // ── Wiring ───────────────────────────────────────────────────────────────────
 
-const RENDER = { study: renderStudy, practice: renderPractice, test: renderTest };
+const RENDER = { study: renderStudy, practice: renderPractice, place: renderPlace, test: renderTest };
 let mode = store.mode in RENDER ? store.mode : 'study';
 const modes = $('.modes'), modeButtons = modes.querySelectorAll('button');
 
@@ -554,6 +687,8 @@ function setMode(m, slide = true) {
   save();
   modeButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
   movePill(modes, slide);
+  setPin(null);
+  svg.classed('placing', false);
   RENDER[m]();
 }
 
@@ -591,10 +726,10 @@ panel.addEventListener('click', e => {
     movePill($('.seg'), true);
     if (cur && !answered) showQuestion();
   } else if (b.classList.contains('opt')) answer(b.dataset.name, b.dataset.name === cur.name ? 'right' : 'wrong');
-  else if (b.id === 'skip') answer('', 'wrong');
+  else if (b.id === 'skip') mode === 'place' ? answerPlace('', false, false) : answer('', 'wrong');
   else if (b.id === 'next') nextQuestion();
   else if (b.dataset.round === 'missed') startRound([...round.missed]);
-  else if (b.dataset.round === 'new') renderPractice();
+  else if (b.dataset.round === 'new') RENDER[mode]();
   else if (b.classList.contains('row')) studyPick(byId(b.dataset.id));
   else if (b.id === 'start') startTest(shuffle(selected()).slice(0, +$('#count').value));
   else if (b.id === 'retest') startTest(test.items.filter((it, i) => !earns(test.marks[i])));
@@ -609,6 +744,7 @@ panel.addEventListener('submit', e => {
   e.preventDefault();
   if (answered) return nextQuestion();
   const typed = $('#typed').value.trim();
+  if (mode === 'place') return checkPlace(typed);
   if (typed) answer(typed, judge(cur, typed));
 });
 
@@ -636,6 +772,13 @@ panel.addEventListener('keydown', e => {
   if (next) next.focus();
 });
 
+// Clicking the map takes the cursor out of the answer box, so in Place mode Enter still checks (or goes on) from there.
+document.addEventListener('keydown', e => {
+  if (mode !== 'place' || e.key !== 'Enter' || e.repeat || e.target !== document.body || !$('#answer')) return;
+  e.preventDefault();
+  $('#answer').requestSubmit();
+});
+
 // 1 to 4 pick a multiple-choice answer.
 document.addEventListener('keydown', e => {
   if (mode !== 'practice' || answered || store.typing || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -646,6 +789,13 @@ document.addEventListener('keydown', e => {
 panel.addEventListener('toggle', e => {
   if (e.target.classList.contains('cats-box')) catsOpen = e.target.open;
 }, true);   // toggle doesn't bubble, so catch it on the way down
+
+// In Place mode a click on the map puts the pin there (a drag still moves the map: d3 swallows that click).
+svg.on('click.place', e => {
+  if (mode !== 'place' || answered || !cur) return;
+  setPin(d3.pointer(e, root.node()));
+  $('#where').textContent = 'Placed. Click the map again to move it.';
+});
 
 modes.addEventListener('click', e => {
   const b = e.target.closest('button');

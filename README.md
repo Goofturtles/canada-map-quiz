@@ -6,10 +6,11 @@ A study tool for a geography map test: points are marked on a blank map of Canad
 
 It covers 76 points: the provinces and territories, capital cities, five other cities, neighbouring countries, islands, oceans, lakes, seas, bays and gulfs, straits, and rivers.
 
-## Three modes
+## Four modes
 
 - **Study** puts the names on the map (zoom in where they get crowded), with a one-line clue for each. Untick "Show names" and click a point to check yourself.
 - **Practice** asks one point at a time, by multiple choice or by typing. Anything you miss comes back a few questions later.
+- **Place** is the other way round: it asks a question in words ("Which bay cuts into the north of Quebec?") and you type the name and click where it is on the map.
 - **Mock test** is the closest to the real thing: numbered points on the map and an answer sheet. Nothing is marked until you hand it in.
 
 Typed answers are marked kindly: abbreviations ("BC", "PEI"), short forms ("Superior", "Bear Lake") and small spelling slips all count, as long as it is clear which thing you mean. The full, correctly spelled name is always shown back to you.
@@ -25,7 +26,7 @@ Or download it (Code > Download ZIP) and open `index.html`. There is no build st
 | File | What it is |
 | --- | --- |
 | `index.html`, `style.css`, `app.js` | The page, its look, and all the behaviour |
-| `data.js` | The 76 points: name, position, accepted short forms, clue |
+| `data.js` | The 76 points: name, position, accepted short forms, clue, and the Place question |
 | `rivers.js` | The six rivers on the list, as lines |
 | `map.js` | The outline map (generated, do not edit) |
 | `sw.js` | Keeps a copy in the browser so the web version opens offline |

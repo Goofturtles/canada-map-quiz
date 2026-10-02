@@ -62,5 +62,11 @@ const WRONG = [['hudson-bay', 'Hudson Strait'], ['hudson-strait', 'Hudson Bay'],
   ['bc', ''], ['bc', '   '], ['usa', 'Canada'], ['usa', 'Alaska'], ['russia', 'USA'], ['iceland', 'Greenland'], ['mb', 'Manitoulin'], ['on', 'Ottawa'], ['pe', 'Charlottetown'], ['halifax', 'Nova Scotia']];
 for (const [id, typed] of WRONG) expect(id, typed, 'wrong');
 
+// 6. Place mode needs a question for every point, and a reach for everything that is open water.
+for (const it of ITEMS) {
+  if (typeof it.q !== 'string' || !it.q.endsWith('?')) { fails++; console.log('FAIL', it.id, 'has no question'); }
+  if (CATS.find(c => c.id === it.cat).pool === 'salt' && !(it.reach > 0)) { fails++; console.log('FAIL', it.id, 'has no reach'); }
+}
+
 console.log(`${ITEMS.length} points | ${OK.length} lenient answers | ${WRONG.length} wrong answers | failures: ${fails}`);
 process.exit(fails ? 1 : 0);
