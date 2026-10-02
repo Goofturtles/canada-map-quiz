@@ -38,7 +38,10 @@ const norm = s => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
 // "Great" ("Bear Lake"). Writing the WRONG kind is not: "Hudson Strait" is not Hudson Bay.
 const KINDS = ['lake', 'river', 'island', 'bay', 'sea', 'ocean', 'strait', 'gulf', 'city'];
 const FILLER = ['great', 'of', 'the', ...KINDS];
-const words = s => norm(s).replace(/\bislands\b/g, 'island').split(' ').filter(Boolean);
+// Common ways of writing a kind word short, or wrong. ("st" is not here: that is Saint.)
+const KIND_FOR = { l: 'lake', lk: 'lake', r: 'river', riv: 'river', i: 'island', is: 'island', isl: 'island', islands: 'island',
+  b: 'bay', oc: 'ocean', str: 'strait', straight: 'strait', straits: 'strait' };
+const words = s => norm(s).split(' ').filter(Boolean).map(w => KIND_FOR[w] || w);
 const core = s => words(s).filter(w => !FILLER.includes(w)).join(' ');
 const kindsIn = s => words(s).filter(w => KINDS.includes(w));
 
@@ -156,6 +159,7 @@ let watching = null;   // the point a 'near' view is following, so it can be re-
 // Map moves are animated, unless the device is set to reduce motion.
 const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
 const glide = ms => svg.transition().duration(calm.matches ? 0 : ms);
+const wholeMap = () => glide(300).call(zoom.transform, d3.zoomIdentity);
 
 function drawMap() {
   const shapes = (g, list, kind, key) => g.selectAll('path').data(list).join('path').attr('d', d => path(d.geometry)).attr('data-shape', d => kind + ':' + d[key]);
@@ -220,8 +224,7 @@ function placeLabels() {
   const free = (b, d) => b[0] >= 0 && b[1] >= 0 && b[2] <= cw && b[3] <= ch
     && !taken.some(o => o[4] !== d && b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
   shown.filter('.named').each(function (d) {
-    const label = d3.select(this).select('.label'), [x, y] = at(d);
-    const w = d.labelWidth || (d.labelWidth = label.node().getComputedTextLength());   // measured once; cleared when the font loads
+    const label = d3.select(this).select('.label'), w = label.node().getComputedTextLength(), [x, y] = at(d);
     const box = ([dx, dy, anchor]) => {
       const x0 = x + dx - (anchor === 'end' ? w : anchor === 'middle' ? w / 2 : 0);
       return [x0 - 2, y + dy - 10, x0 + w + 2, y + dy + 3];
@@ -422,6 +425,7 @@ function answer(given, verdict) {
   markers.filter(d => d === cur).classed('named', true).classed(right ? 'right' : 'wrong', true);
   placeLabels();
   (store.typing ? $('#typed') : $('#next')).focus();
+  if (store.typing) $('#feedback').scrollIntoView({ block: 'nearest' });   // with a phone keyboard up it starts out of view
 }
 
 function roundDone() {
@@ -436,6 +440,7 @@ function roundDone() {
         : '<p class="tip">Clean round. Try the mock test next.</p><div class="actions"><button type="button" class="primary" data-round="new">New round</button></div>');
   paint(missed.map(it => ({ it, cls: 'named wrong', say: it.name })));
   spotlight(null);
+  wholeMap();
 }
 
 // ── Mock test ────────────────────────────────────────────────────────────────
@@ -517,6 +522,7 @@ function handIn() {
   test.items.forEach((it, i) => record(it, earns(test.marks[i])));
   keepTest();
   renderTest();
+  wholeMap();
   panel.scrollTop = 0;
   $('#newtest').focus();
 }
@@ -622,6 +628,7 @@ panel.addEventListener('mouseover', follow);
 panel.addEventListener('focusin', follow);
 
 panel.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.repeat) { e.preventDefault(); return; }   // a held key is one press
   if (e.key !== 'Enter' || !test || test.marks || e.target.dataset.i == null) return;
   e.preventDefault();
   const next = $('#a' + (+e.target.dataset.i + 1));
@@ -654,7 +661,7 @@ $('#reset').addEventListener('click', e => {
 
 $('#zin').addEventListener('click', () => glide(200).call(zoom.scaleBy, 1.7));
 $('#zout').addEventListener('click', () => glide(200).call(zoom.scaleBy, 1 / 1.7));
-$('#zreset').addEventListener('click', () => glide(300).call(zoom.transform, d3.zoomIdentity));
+$('#zreset').addEventListener('click', wholeMap);
 
 // On a phone the on-screen keyboard covers the bottom of the page without resizing it. Size the app to what is
 // actually visible (style.css uses these on small screens only), so the map and the line being typed stay in view.
@@ -677,8 +684,9 @@ function fitScreen() {
 $('.zoom').addEventListener('click', () => { watching = null; });   // his own zooming: stop steering the map back
 window.addEventListener('resize', fitScreen);
 if (viewport) { viewport.addEventListener('resize', fitScreen); viewport.addEventListener('scroll', fitScreen); }
-// Button and label widths change once Inter has loaded.
-document.fonts.ready.then(() => { ITEMS.forEach(it => { it.labelWidth = 0; }); fitScreen(); });
+// Button and label widths change when Inter arrives (the italic only loads once a water name is first shown).
+document.fonts.ready.then(fitScreen);
+document.fonts.addEventListener('loadingdone', fitScreen);
 
 drawProgress();
 drawMap();

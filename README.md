@@ -30,6 +30,7 @@ Or download it (Code > Download ZIP) and open `index.html`. There is no build st
 | `map.js` | The outline map (generated, do not edit) |
 | `sw.js` | Keeps a copy in the browser so the web version opens offline |
 | `tools/build-map.js` | Rebuilds `map.js`: `node tools/build-map.js` (this one does need internet) |
+| `tools/test-marker.js` | Checks the answer marking: `node tools/test-marker.js` |
 | `vendor/` | D3, the Inter font, and their licences (`LICENSES.txt`) |
 
 ## Credits

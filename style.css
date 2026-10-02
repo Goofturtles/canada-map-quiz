@@ -387,7 +387,8 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   .typing .test-head { position: static; }
 }
 
-/* With a finger you pinch to zoom, so only "Whole map" stays and less of the map is covered. */
+/* With a finger, "Whole map" does the zooming out, so the minus button goes and less of the map is covered.
+   Plus stays for anyone who can't pinch. */
 @media (pointer: coarse) {
-  #zin, #zout { display: none; }
+  #zout { display: none; }
 }
