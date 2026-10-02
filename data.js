@@ -7,8 +7,9 @@
 
 // label = optional different name to print on the map.
 // q     = the question Place mode asks. It must lead to this one thing without naming it.
-// reach = how many km from pt still counts as the right spot in Place mode, for things with no outline to click
-//         inside (open water, Manitoulin) or with more than one piece (Victoria Island).
+// reach = how many km from pt still counts as the right spot in Place mode: for things with no outline to click
+//         inside (open water, Manitoulin), and tighter than usual for two cities that are close (Victoria, Vancouver).
+// more  = extra points for an island the map draws as more than one piece of land; each piece under one counts.
 // part  = for a point that stands for one part of a bigger outline (Alaska): the spot must be within this many km.
 // pool  = where multiple-choice wrong answers come from when a group is too small to fill four options.
 
@@ -83,7 +84,7 @@ const ITEMS = [
 
   // ── Capital cities ──
   { id: 'victoria', cat: 'capital', name: 'Victoria', pt: [-123.37, 48.43],
-    q: 'What is the capital of British Columbia?',
+    q: 'What is the capital of British Columbia?', reach: 45,
     hint: 'Capital of British Columbia. On the southern tip of Vancouver Island.' },
   { id: 'edmonton', cat: 'capital', name: 'Edmonton', pt: [-113.49, 53.55],
     q: 'What is the capital of Alberta?',
@@ -99,7 +100,7 @@ const ITEMS = [
     hint: 'Capital of Ontario. On the north-west shore of Lake Ontario.' },
   { id: 'quebec-city', cat: 'capital', name: 'Quebec City', pt: [-71.21, 46.81],
     also: ['ville de quebec'],
-    q: 'What is the capital of the province of Quebec?',
+    q: 'What is the capital of the largest province?',
     hint: 'Capital of Quebec. On the St. Lawrence River, north-east of Montreal.' },
   { id: 'fredericton', cat: 'capital', name: 'Fredericton', pt: [-66.64, 45.96],
     q: 'What is the capital of New Brunswick?',
@@ -129,7 +130,7 @@ const ITEMS = [
   // ── Other cities ──
   { id: 'vancouver', cat: 'city', name: 'Vancouver', pt: [-123.12, 49.28],
     also: ['vancouver british columbia', 'vancouver bc'],
-    q: 'Which big city is on the British Columbia mainland coast, just north of the U.S. border?',
+    q: 'Which big city is on the British Columbia mainland coast, just north of the U.S. border?', reach: 45,
     hint: 'British Columbia. On the mainland coast, across the water from Vancouver Island.' },
   { id: 'thunder-bay', cat: 'city', name: 'Thunder Bay', pt: [-89.25, 48.38],
     also: ['thunder bay ontario'],
@@ -155,7 +156,7 @@ const ITEMS = [
     hint: 'The country south of Canada.' },
   { id: 'usa-alaska', cat: 'country', name: 'United States of America', label: 'U.S.A. (Alaska)', pt: [-152.0, 64.5], shape: '840',
     also: ['usa', 'united states', 'us', 'america', 'the united states', 'the united states of america', 'usa alaska', 'alaska usa', 'united states of america alaska', 'united states alaska', 'states', 'alaska', 'alaska united states', 'alaska united states of america'],
-    q: 'Which country does the land west of Yukon belong to?', part: 900,
+    q: 'Which country does the land west of Yukon belong to?', part: 1600,
     hint: 'This part is Alaska, a U.S. state west of Yukon.' },
   { id: 'russia', cat: 'country', name: 'Russia', pt: [-172.5, 65.9], shape: '643',
     also: ['russian federation'],
@@ -183,7 +184,7 @@ const ITEMS = [
     q: 'Which is the most northerly island in Canada, beside Greenland?',
     hint: 'Arctic. The northernmost island, right beside Greenland.' },
   { id: 'victoria-island', cat: 'island', name: 'Victoria Island', pt: [-110.0, 70.8],
-    q: 'Which large Arctic island is split between Nunavut and the Northwest Territories?', reach: 250,
+    q: 'Which large Arctic island is split between Nunavut and the Northwest Territories?', more: [[-106, 71]],
     hint: 'Arctic. Split between Nunavut and the Northwest Territories, east of Banks Island.' },
   { id: 'banks', cat: 'island', name: 'Banks Island', pt: [-121.5, 73.0],
     also: ['banks'],
@@ -194,7 +195,7 @@ const ITEMS = [
     hint: "West coast. The large island off B.C.'s south-west corner. Victoria is on it." },
   { id: 'haida-gwaii', cat: 'island', name: 'Haida Gwaii', pt: [-132.3, 53.6],
     also: ['queen charlotte islands', 'haida gwaii islands'],
-    q: 'Which group of islands lies off the north coast of British Columbia?',
+    q: 'Which group of islands lies off the north coast of British Columbia?', more: [[-131.6, 52.6]],
     hint: "West coast. The island group off B.C.'s north coast." },
   { id: 'cape-breton', cat: 'island', name: 'Cape Breton Island', pt: [-60.75, 46.5],
     also: ['cape breton'],
@@ -267,11 +268,11 @@ const ITEMS = [
 
   // ── Bays & gulfs ──
   { id: 'hudson-bay', cat: 'bay', name: 'Hudson Bay', pt: [-86.0, 60.0],
-    q: 'Which huge bay is bordered by Manitoba, Ontario, Quebec and Nunavut?', reach: 520,
+    q: 'Which huge bay is bordered by Manitoba, Ontario, Quebec and Nunavut?', reach: 650,
     hint: 'The giant bay in the middle of Canada, touching Nunavut, Manitoba, Ontario and Quebec.' },
   { id: 'james-bay', cat: 'bay', name: 'James Bay', pt: [-80.5, 53.3],
     also: ['james'],
-    q: 'Which bay hangs off the southern end of Hudson Bay, between Ontario and Quebec?', reach: 190,
+    q: 'Which bay hangs off the southern end of Hudson Bay, between Ontario and Quebec?', reach: 230,
     hint: 'The small bay hanging off the bottom of Hudson Bay, between Ontario and Quebec.' },
   { id: 'georgian-bay', cat: 'bay', name: 'Georgian Bay', pt: [-80.9, 45.2],
     also: ['georgian'],

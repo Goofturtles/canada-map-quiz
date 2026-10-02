@@ -444,6 +444,7 @@ function answer(given, verdict) {
 function roundDone() {
   cur = null;
   answered = true;
+  setPin(null);
   const missed = [...round.missed];
   $('#card').innerHTML = !round.total ? NOTHING
     : `<h2 class="ask">Round done</h2><p class="score"><b>${round.firstTry}</b> of ${round.total} right first time</p>` +
@@ -475,8 +476,9 @@ function renderPlace() {
 
 function setPin(xy) {
   const node = svg.node(), fit = Math.min(node.clientWidth / W, node.clientHeight / H) || 1;
-  // slackKm: nobody can point more exactly than about 14 px, so that much error is forgiven at the current zoom.
-  pin = xy && { xy, lonlat: projection.invert(xy), slackKm: 14 / (d3.zoomTransform(node).k * fit) * KM_PER_UNIT };
+  // slackKm: nobody can point more exactly than about 14 px, so that much error is forgiven at the current zoom,
+  // up to 100 km (beyond that, zooming in is the answer).
+  pin = xy && { xy, lonlat: projection.invert(xy), slackKm: Math.min(100, 14 / (d3.zoomTransform(node).k * fit) * KM_PER_UNIT) };
   pinMark.attr('class', pin ? 'pin show' : 'pin');
   placeMarkers();
 }
@@ -495,24 +497,25 @@ function showPlace() {
   $('#typed').focus();
 }
 
-// The outline that counts as "on it": the province, country or lake itself, or for an island the one piece of
-// land its point sits on. Cities, rivers and open water have none.
+// The outline that counts as "on it": the province, country or lake itself, or for an island the piece of land
+// under its point (and under each of its `more` points, where the map draws it as several pieces).
+// Cities, rivers and open water have none.
 function outline(it) {
   if (it.cat === 'province') return MAP.provinces.find(p => p.code === it.shape).geometry;
   if (it.cat === 'country') return MAP.countries.find(c => c.id === it.shape).geometry;
   if (it.cat === 'lake') return MAP.lakes.find(l => l.name === it.shape).geometry;
   if (it.cat !== 'island') return null;
+  const pieces = [];
   for (const p of MAP.provinces) {
-    const pieces = p.geometry.type === 'MultiPolygon' ? p.geometry.coordinates : [p.geometry.coordinates];
     const mainland = ITEMS.find(o => o.shape === p.code).pt;
-    for (const coordinates of pieces) {
+    for (const coordinates of p.geometry.type === 'MultiPolygon' ? p.geometry.coordinates : [p.geometry.coordinates]) {
       const piece = { type: 'Polygon', coordinates };
-      // Manitoulin is not a separate piece in the map data (it is a gap in the lake), so the piece its point is
-      // on is all of mainland Ontario. That is no use as an outline, and it falls back to its reach.
-      if (d3.geoContains(piece, it.pt)) return d3.geoContains(piece, mainland) ? null : piece;
+      // Manitoulin is not a separate piece in the map data (it is a gap in the lake), so the piece under its point
+      // is all of mainland Ontario. That is no use as an outline, so it is left out and its reach decides.
+      if ([it.pt, ...(it.more || [])].some(pt => d3.geoContains(piece, pt)) && !d3.geoContains(piece, mainland)) pieces.push(coordinates);
     }
   }
-  return null;
+  return pieces.length ? { type: 'MultiPolygon', coordinates: pieces } : null;
 }
 
 // km from a spot on the drawing to the nearest stretch of a listed river.
@@ -542,8 +545,10 @@ function onWater(spot) {
 function placedRight(it, spot) {
   if (SALT.includes(it)) {
     // Open water: within its reach, on water, and no other sea, bay or strait is a better fit for that spot.
+    // An ocean is so big that it would beat the gulfs and seas inside it, so it only competes with other oceans.
     const share = o => Math.max(0, kmBetween(spot.lonlat, o.pt) - (o === it ? spot.slackKm : 0)) / o.reach;
-    return share(it) <= 1 && SALT.every(o => o === it || share(o) >= share(it)) && onWater(spot);
+    const rival = o => o !== it && !(o.cat === 'ocean' && it.cat !== 'ocean');
+    return share(it) <= 1 && SALT.every(o => !rival(o) || share(o) >= share(it)) && onWater(spot);
   }
   const far = it.cat === 'river' ? riverKm(it, spot.xy) : kmBetween(spot.lonlat, it.pt);
   const shape = outline(it);
