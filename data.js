@@ -100,7 +100,7 @@ const ITEMS = [
     hint: 'Capital of Ontario. On the north-west shore of Lake Ontario.' },
   { id: 'quebec-city', cat: 'capital', name: 'Quebec City', pt: [-71.21, 46.81],
     also: ['ville de quebec'],
-    q: 'What is the capital of the largest province?',
+    q: 'What is the capital of the largest province by area?',
     hint: 'Capital of Quebec. On the St. Lawrence River, north-east of Montreal.' },
   { id: 'fredericton', cat: 'capital', name: 'Fredericton', pt: [-66.64, 45.96],
     q: 'What is the capital of New Brunswick?',
