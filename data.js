@@ -1,7 +1,7 @@
 // Everything on the "Show Me What You Know About Where" list.
 // pt    = [longitude, latitude] of the point shown on the map.
-// also  = short or other forms that still earn the mark, with a reminder to write the name out in full.
-//         Short forms that could mean two things on the list (Hudson, Ottawa, Victoria, Ontario, Labrador) are left out on purpose.
+// also  = other ways to write it that count: abbreviations and alternative names. Dropping "Lake", "River",
+//         "Island", "Great" and so on is handled in app.js and does not need listing here.
 // shape = the map feature to light up: province code, country id, lake name or river name.
 // snap  = move the point onto the nearest bit of the drawn river.
 
@@ -25,33 +25,43 @@ const CATS = [
 const ITEMS = [
   // ── Provinces & territories ──
   { id: 'bc', cat: 'province', name: 'British Columbia', pt: [-124.5, 54.5], shape: 'CA-BC',
+    also: ['bc'],
     hint: 'Westernmost province, on the Pacific coast.' },
   { id: 'ab', cat: 'province', name: 'Alberta', pt: [-114.5, 55.0], shape: 'CA-AB',
+    also: ['ab', 'alta'],
     hint: 'Between British Columbia and Saskatchewan.' },
   { id: 'sk', cat: 'province', name: 'Saskatchewan', pt: [-106.0, 55.0], shape: 'CA-SK',
+    also: ['sk', 'sask'],
     hint: 'Prairie province between Alberta and Manitoba. No coastline.' },
   { id: 'mb', cat: 'province', name: 'Manitoba', pt: [-97.5, 55.5], shape: 'CA-MB',
+    also: ['mb', 'man'],
     hint: 'Easternmost Prairie province. Its north-east edge touches Hudson Bay.' },
   { id: 'on', cat: 'province', name: 'Ontario', pt: [-86.0, 50.5], shape: 'CA-ON',
+    also: ['on', 'ont'],
     hint: 'North of the Great Lakes, south of Hudson Bay.' },
   { id: 'qc', cat: 'province', name: 'Quebec', pt: [-72.5, 52.5], shape: 'CA-QC',
+    also: ['qc', 'que', 'pq'],
     hint: 'Largest province, east of Ontario.' },
   { id: 'nb', cat: 'province', name: 'New Brunswick', pt: [-66.4, 46.7], shape: 'CA-NB',
+    also: ['nb'],
     hint: 'Borders Quebec and the U.S. state of Maine. West of Nova Scotia.' },
   { id: 'ns', cat: 'province', name: 'Nova Scotia', pt: [-62.9, 45.3], shape: 'CA-NS',
+    also: ['ns'],
     hint: 'The peninsula east of New Brunswick, sticking out into the Atlantic.' },
   { id: 'pe', cat: 'province', name: 'Prince Edward Island', pt: [-63.9, 46.55], shape: 'CA-PE',
-    also: ['pei'],
+    also: ['pei', 'pe'],
     hint: 'Smallest province. The island in the Gulf of St. Lawrence.' },
   { id: 'nl', cat: 'province', name: 'Newfoundland and Labrador', pt: [-61.8, 53.6], shape: 'CA-NL',
-    also: ['newfoundland labrador', 'labrador and newfoundland'],
+    also: ['newfoundland labrador', 'labrador and newfoundland', 'nl', 'nfld', 'newfoundland', 'labrador'],
     hint: 'Two parts: the island of Newfoundland, and Labrador on the mainland beside Quebec.' },
   { id: 'yt', cat: 'province', name: 'Yukon', pt: [-136.0, 63.5], shape: 'CA-YT',
-    also: ['yukon territory', 'the yukon'],
+    also: ['yukon territory', 'the yukon', 'yt', 'yk'],
     hint: 'Westernmost territory, beside Alaska.' },
   { id: 'nt', cat: 'province', name: 'Northwest Territories', pt: [-118.0, 63.8], shape: 'CA-NT',
+    also: ['nt', 'nwt'],
     hint: 'The middle territory, between Yukon and Nunavut.' },
   { id: 'nu', cat: 'province', name: 'Nunavut', pt: [-96.0, 65.0], shape: 'CA-NU',
+    also: ['nu'],
     hint: 'Largest and easternmost territory. Includes most of the Arctic islands.' },
 
   // ── Capital cities ──
@@ -104,11 +114,10 @@ const ITEMS = [
 
   // ── Foreign countries ──
   { id: 'usa', cat: 'country', name: 'United States of America', pt: [-101.0, 45.2], shape: '840',
-    also: ['usa', 'united states', 'us', 'america', 'the united states', 'the united states of america'],
+    also: ['usa', 'united states', 'us', 'america', 'the united states', 'the united states of america', 'states', 'united states america'],
     hint: 'The country south of Canada.' },
   { id: 'usa-alaska', cat: 'country', name: 'United States of America', label: 'U.S.A. (Alaska)', pt: [-152.0, 64.5], shape: '840',
-    also: ['usa', 'united states', 'us', 'america', 'the united states', 'the united states of america',
-           'usa alaska', 'alaska usa', 'united states of america alaska', 'united states alaska'],
+    also: ['usa', 'united states', 'us', 'america', 'the united states', 'the united states of america', 'usa alaska', 'alaska usa', 'united states of america alaska', 'united states alaska', 'states', 'alaska'],
     hint: 'This part is Alaska, a U.S. state west of Yukon.' },
   { id: 'russia', cat: 'country', name: 'Russia', pt: [-172.5, 65.9], shape: '643',
     also: ['russian federation'],
@@ -119,8 +128,7 @@ const ITEMS = [
   { id: 'iceland', cat: 'country', name: 'Iceland', pt: [-18.5, 65.0], shape: '352',
     hint: 'Island country east of Greenland.' },
   { id: 'spm', cat: 'country', name: 'France (St. Pierre and Miquelon)', pt: [-56.33, 46.94], shape: '666',
-    also: ['st pierre and miquelon', 'france', 'st pierre and miquelon france', 'st pierre et miquelon',
-           'st pierre miquelon', 'france st pierre et miquelon'],
+    also: ['st pierre and miquelon', 'france', 'st pierre and miquelon france', 'st pierre et miquelon', 'st pierre miquelon', 'france st pierre et miquelon', 'st pierre', 'spm'],
     hint: 'Tiny French islands just off the south coast of Newfoundland.' },
 
   // ── Islands ──

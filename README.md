@@ -12,13 +12,13 @@ It covers 76 points: the provinces and territories, capital cities, five other c
 - **Practice** asks one point at a time, by multiple choice or by typing. Anything you miss comes back a few questions later.
 - **Mock test** is the closest to the real thing: numbered points on the map and an answer sheet. Nothing is marked until you hand it in.
 
-Spelling counts in typed answers. Capital letters, accents, full stops and apostrophes are forgiven; letters are not.
+Typed answers are marked kindly: abbreviations ("BC", "PEI"), short forms ("Superior", "Bear Lake") and small spelling slips all count, as long as it is clear which thing you mean. The full, correctly spelled name is always shown back to you.
 
 ## Running it
 
-Use the link above on a laptop or a phone; it needs a connection to load.
+Use the link above on a laptop or a phone. After the first visit the browser keeps a copy, so it opens with no signal too.
 
-To use it with no internet, download this folder and open `index.html`. There is no build step and nothing is loaded from the web.
+Or download it (Code > Download ZIP) and open `index.html`. There is no build step and nothing is loaded from the web.
 
 ## Files
 
@@ -28,6 +28,7 @@ To use it with no internet, download this folder and open `index.html`. There is
 | `data.js` | The 76 points: name, position, accepted short forms, clue |
 | `rivers.js` | The six rivers on the list, as lines |
 | `map.js` | The outline map (generated, do not edit) |
+| `sw.js` | Keeps a copy in the browser so the web version opens offline |
 | `tools/build-map.js` | Rebuilds `map.js`: `node tools/build-map.js` (this one does need internet) |
 | `vendor/` | D3, the Inter font, and their licences (`LICENSES.txt`) |
 

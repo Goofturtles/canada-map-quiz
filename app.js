@@ -29,12 +29,26 @@ const byId = id => ITEMS.find(it => it.id === id);
 
 // ── Checking a typed answer ──────────────────────────────────────────────────
 
-// Capitals, accents, full stops and apostrophes are forgiven. Letters are not.
+// Capitals, accents, full stops and apostrophes never matter.
 const norm = s => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
   .replace(/&/g, ' and ').replace(/['\u2018\u2019\u02bc\u00b4\u2032`.]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
   .replace(/\bsaint\b/g, 'st').replace(/^the /, '');
 
-ITEMS.forEach(it => { it.keys = [it.name, ...(it.also || [])].map(norm); });
+// Words that say what kind of thing it is. Leaving one out is fine ("Superior", "Fraser"), and so is leaving out
+// "Great" ("Bear Lake"). Writing the WRONG kind is not: "Hudson Strait" is not Hudson Bay.
+const KINDS = ['lake', 'river', 'island', 'bay', 'sea', 'ocean', 'strait', 'gulf', 'city'];
+const FILLER = ['great', 'of', 'the', ...KINDS];
+const words = s => norm(s).replace(/\bislands\b/g, 'island').split(' ').filter(Boolean);
+const core = s => words(s).filter(w => !FILLER.includes(w)).join(' ');
+const kindsIn = s => words(s).filter(w => KINDS.includes(w));
+
+// For each point: its exact name, the stripped-down forms that count (its name and every `also`), and its kind words.
+ITEMS.forEach(it => {
+  const forms = [it.name, ...(it.also || [])];
+  it.key = norm(it.name);
+  it.cores = [...new Set(forms.map(core).filter(Boolean))];
+  it.kinds = new Set(forms.flatMap(kindsIn));
+});
 
 // Edits needed to turn a into b. Two neighbouring letters swapped ("Hailfax") count as one.
 function editDistance(a, b) {
@@ -51,18 +65,32 @@ function editDistance(a, b) {
   return prev[b.length];
 }
 
-// 'right' (the full name), 'short' (an accepted short form), 'close' (a letter or two off) or 'wrong'.
-function judge(it, typed) {
-  const t = norm(typed);
-  if (!t) return 'wrong';
-  if (t === it.keys[0]) return 'right';
-  if (it.keys.includes(t)) return 'short';
-  // Naming a different thing in the same group is never just a spelling slip.
-  if (ITEMS.some(o => o.cat === it.cat && o.name !== it.name && o.keys.includes(t))) return 'wrong';
-  return it.keys.some(k => editDistance(t, k) <= (k.length >= 10 ? 2 : k.length >= 5 ? 1 : 0)) ? 'close' : 'wrong';
+// How many letters off a typed answer is from the nearest form of a point, or Infinity if it is too far to be it.
+// Longer names get more slack; abbreviations of three letters or fewer have to be exact.
+const slack = n => n < 4 ? 0 : n < 6 ? 1 : n < 10 ? 2 : 3;
+function lettersOff(it, typedCore) {
+  return Math.min(...it.cores.map(c => {
+    const d = editDistance(typedCore, c);
+    return d <= slack(c.length) ? d : Infinity;
+  }));
 }
-// Spelling counts: a near miss is flagged as a spelling slip but does not get the mark.
-const earns = verdict => verdict === 'right' || verdict === 'short';
+
+// 'right' (the full name), 'short' (a shorter form or abbreviation), 'close' (spelling a bit off) or 'wrong'.
+// Everything but 'wrong' gets the mark: it only has to be clear which thing is meant.
+function judge(it, typed) {
+  if (norm(typed) === it.key) return 'right';
+  if (kindsIn(typed).some(k => !it.kinds.has(k))) return 'wrong';
+  const c = core(typed);
+  if (!c) return 'wrong';
+  const off = lettersOff(it, c);
+  if (off === Infinity) return 'wrong';
+  // It must be clearly this one: nothing else in the same group may fit as well or better...
+  if (ITEMS.some(o => o.cat === it.cat && o.name !== it.name && lettersOff(o, c) <= off)) return 'wrong';
+  // ...and a name that is exactly some other point's ("Huron" for Hudson Bay) is a wrong answer, not a spelling slip.
+  if (off && ITEMS.some(o => o.name !== it.name && o.cores.includes(c))) return 'wrong';
+  return off ? 'close' : 'short';
+}
+const earns = verdict => verdict !== 'wrong';
 
 // ── Saved progress ───────────────────────────────────────────────────────────
 
@@ -97,9 +125,13 @@ function confirmed(b, question) {
   }
   b.dataset.sure = b.textContent;
   b.textContent = question;
-  b.addEventListener('blur', () => {
+  // Back to normal when you move on, or after a few seconds (a tap on an iPhone never focuses the button, so
+  // there would be no blur to wait for).
+  const disarm = () => {
     if (b.dataset.sure) { b.textContent = b.dataset.sure; delete b.dataset.sure; }
-  }, { once: true });
+  };
+  b.addEventListener('blur', disarm, { once: true });
+  setTimeout(disarm, 4000);
   return false;
 }
 
@@ -114,11 +146,16 @@ projection.clipExtent([[-900, -700], [W + 900, H + 700]]);
 const path = d3.geoPath(projection);
 // clickDistance: a click that wobbles a few pixels is still a click on a point, not a drag of the map.
 const zoom = d3.zoom().clickDistance(5).scaleExtent([1, 14]).translateExtent([[-200, -160], [W + 200, H + 160]])
-  .on('zoom', e => { root.attr('transform', e.transform); placeMarkers(); });
+  .on('zoom', e => {
+    if (e.sourceEvent) watching = null;   // he moved the map himself, so stop steering it back to the point
+    root.attr('transform', e.transform);
+    placeMarkers();
+  });
 let markers = gMarkers.selectAll('g');
+let watching = null;   // the point a 'near' view is following, so it can be re-centred when the screen changes size
 // Map moves are animated, unless the device is set to reduce motion.
-const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const glide = ms => svg.transition().duration(calm ? 0 : ms);
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
+const glide = ms => svg.transition().duration(calm.matches ? 0 : ms);
 
 function drawMap() {
   const shapes = (g, list, kind, key) => g.selectAll('path').data(list).join('path').attr('d', d => path(d.geometry)).attr('data-shape', d => kind + ':' + d[key]);
@@ -145,7 +182,7 @@ function drawMap() {
       e.preventDefault();
       pickOnMap(d);
     });
-  markers.append('circle').attr('class', 'hit').attr('r', 13);   // invisible, so a fingertip doesn't have to land on the dot
+  markers.append('circle').attr('class', 'hit').attr('r', 16);   // invisible, so a fingertip doesn't have to land on the dot
   markers.append('circle').attr('class', 'ring').attr('r', 8);
   markers.append('circle').attr('class', 'dot').attr('r', 5);
   markers.append('text').attr('class', 'num').attr('dy', '0.36em');
@@ -183,7 +220,8 @@ function placeLabels() {
   const free = (b, d) => b[0] >= 0 && b[1] >= 0 && b[2] <= cw && b[3] <= ch
     && !taken.some(o => o[4] !== d && b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1]);
   shown.filter('.named').each(function (d) {
-    const label = d3.select(this).select('.label'), w = label.node().getComputedTextLength(), [x, y] = at(d);
+    const label = d3.select(this).select('.label'), [x, y] = at(d);
+    const w = d.labelWidth || (d.labelWidth = label.node().getComputedTextLength());   // measured once; cleared when the font loads
     const box = ([dx, dy, anchor]) => {
       const x0 = x + dx - (anchor === 'end' ? w : anchor === 'middle' ? w / 2 : 0);
       return [x0 - 2, y + dy - 10, x0 + w + 2, y + dy + 3];
@@ -208,8 +246,6 @@ function paint(entries) {
 
 // Pulse one point. withShape also lights up its province, country, lake or river.
 // view says what the map may do to show it: 'keep' (nothing), 'whole' or 'near' (see lookAt).
-let watching = null;   // the point a 'near' view is following, so it can be re-centred when the screen changes size
-
 function spotlight(it, withShape = true, view = 'whole') {
   markers.classed('active', d => d === it);
   const key = it && withShape && SHAPE_KIND[it.cat] ? SHAPE_KIND[it.cat] + ':' + it.shape : null;
@@ -243,7 +279,10 @@ function lookAt(it, near) {
     const central = Math.abs(x - W / 2) < (W / 2 + mx) * 0.7 && Math.abs(y - H / 2) < (H / 2 + my) * 0.7;
     const k = Math.max(t.k, closeUp);
     if (t.k < closeUp || !central) to = d3.zoomIdentity.translate(W / 2 - it.xy[0] * k, H / 2 - it.xy[1] * k).scale(k);
-  } else if (x < 40 - mx || x > W - 40 + mx || y < 40 - my || y > H - 40 + my) to = d3.zoomIdentity;
+  } else {
+    const edge = 10 / fit;   // about a dot's width, in map units
+    if (x < edge - mx || x > W - edge + mx || y < edge - my || y > H - edge + my) to = d3.zoomIdentity;
+  }
   if (to) glide(350).call(zoom.transform, zoom.constrain()(to, [[0, 0], [W, H]], zoom.translateExtent()));
 }
 
@@ -259,7 +298,7 @@ function pickOnMap(it) {
 // ── Shared panel pieces ──────────────────────────────────────────────────────
 
 // The groups fold away so they don't push the question off a phone screen. Open by default where there is room.
-let catsOpen = window.matchMedia('(min-width: 861px)').matches;
+let catsOpen = window.matchMedia('(min-width: 861px) and (min-height: 501px)').matches;
 
 function catsHtml(locked) {
   const off = locked ? ' disabled' : '';
@@ -284,8 +323,8 @@ function renderStudy() {
   panel.innerHTML = catsHtml() +
     `<label class="switch"><input type="checkbox" id="names"${store.names ? ' checked' : ''}><span>Show names</span></label>` +
     (!items.length ? NOTHING
-      : store.names ? '<p class="tip">Point at a name to find it on the map. Zoom in where it gets crowded.</p>' + list()
-      : '<p class="tip">Names are hidden. Say what a point is, then click it to check.</p><div id="card" role="status"></div>');
+      : store.names ? '<p class="tip">Pick a name below to find it on the map. Zoom in where it gets crowded.</p>' + list()
+      : '<p class="tip">Names are hidden. Say what a point is, then press it to check.</p><div id="card" role="status"></div>');
   paint(items.map(it => ({ it, cls: store.names ? 'named' : '', say: store.names ? it.name : 'Point, ' + catOf(it).noun + '. Press Enter to see its name' })));
   spotlight(null);
 }
@@ -344,12 +383,12 @@ function options(it) {
 function showQuestion() {
   answered = false;
   const body = store.typing
-    ? `<form id="answer"><input id="typed" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type the name" aria-label="Your answer"><button class="primary">Check</button></form>
+    ? `<form id="answer"><input id="typed" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type the name" aria-label="Your answer"><button class="primary">Check</button></form>
        <button type="button" class="link" id="skip">I don't know</button>`
     : '<div class="options">' + options(cur).map((name, i) => `<button type="button" class="opt" data-name="${esc(name)}"><kbd>${i + 1}</kbd><span>${esc(name)}</span></button>`).join('') + '</div>';
   $('#card').innerHTML = `<p class="meta">${queue.length + 1} to go</p><h2 class="ask">${esc(catOf(cur).ask)}</h2>${body}<div id="feedback" aria-live="polite"></div>`;
   paint([{ it: cur, say: 'The point to name' }]);
-  spotlight(cur);
+  spotlight(cur, true, 'near');
   if (store.typing) $('#typed').focus();
 }
 
@@ -364,21 +403,25 @@ function answer(given, verdict) {
   } else if (!round.missed.has(cur)) round.firstTry++;
   record(cur, right);
 
-  panel.querySelectorAll('.opt, #typed, #answer button, #skip').forEach(el => { el.disabled = true; });
+  const onward = queue.length ? 'Next' : 'Finish';
+  panel.querySelectorAll('.opt, #skip').forEach(el => { el.disabled = true; });
+  // When typing, the box stays live so a phone keeps its keyboard up, and its button turns into Next: Enter in the
+  // box then goes on. (A disabled button would stop Enter from doing anything at all.)
+  if (store.typing) $('#answer button').textContent = onward;
   panel.querySelectorAll('.opt').forEach(b => {
     if (b.dataset.name === cur.name) b.classList.add('right');
     else if (b.dataset.name === given) b.classList.add('wrong');
   });
   const wrote = given && store.typing ? ` You wrote “${esc(given)}”` : '';
   const verdictText = verdict === 'right' ? 'Correct'
-    : verdict === 'short' ? 'Right. On the test, write it exactly like this:'
-    : verdict === 'close' ? 'Almost, but the spelling is off.' + wrote
+    : verdict === 'short' ? 'Right. The full name:'
+    : verdict === 'close' ? 'Right. The exact spelling:'
     : given ? 'Not quite.' + wrote : 'Here it is';
-  $('#feedback').innerHTML = `<p class="verdict ${right ? 'right' : 'wrong'}">${verdictText}</p>${answerHtml(cur)}
-    <button type="button" class="primary" id="next">${queue.length ? 'Next' : 'Finish'}</button>`;
+  $('#feedback').innerHTML = `<p class="verdict ${right ? 'right' : 'wrong'}">${verdictText}</p>${answerHtml(cur)}` +
+    (store.typing ? '' : `<button type="button" class="primary" id="next">${onward}</button>`);
   markers.filter(d => d === cur).classed('named', true).classed(right ? 'right' : 'wrong', true);
   placeLabels();
-  $('#next').focus();
+  (store.typing ? $('#typed') : $('#next')).focus();
 }
 
 function roundDone() {
@@ -399,6 +442,17 @@ function roundDone() {
 
 let test = null;   // { items, answers, marks }   marks stays null until the test is handed in
 
+// A phone can drop a page that is in the background, so a test being written is saved as it is typed.
+function keepTest() {
+  store.test = test && !test.marks ? { ids: test.items.map(it => it.id), answers: test.answers } : null;
+  save();
+}
+(saved => {
+  if (!saved || !Array.isArray(saved.ids) || !Array.isArray(saved.answers)) return;
+  const items = saved.ids.map(byId);
+  if (items.length && items.every(Boolean) && saved.answers.length === items.length) test = { items, answers: saved.answers.map(String), marks: null };
+})(store.test);
+
 const testUnderWay = () => !!test && !test.marks && test.answers.some(a => a.trim());
 
 function renderTest() {
@@ -406,7 +460,7 @@ function renderTest() {
   if (!test) {
     const counts = [pool.length, 40, 20, 10].filter((n, i) => i === 0 || n < pool.length);
     panel.innerHTML = catsHtml() + (!pool.length ? NOTHING
-      : `<p class="tip">Like the real check-in: numbered points on the map, and you write what each one is. Nothing is marked until you hand it in. Spelling counts.</p>
+      : `<p class="tip">Like the real check-in: numbered points on the map, and you write what each one is. Nothing is marked until you hand it in. Short forms and small spelling slips still count.</p>
          <label class="field"><span>How many points</span><select id="count">${counts.map((n, i) => `<option value="${n}">${i ? n : 'All ' + n}</option>`).join('')}</select></label>
          <div class="actions"><button type="button" class="primary" id="start">Start the test</button></div>`);
     paint([]);
@@ -419,7 +473,7 @@ function renderTest() {
     panel.innerHTML = catsHtml(true) +
       `<div class="test-head"><span id="filled"></span><button type="button" class="primary" id="handin">Hand in</button></div>
        <ol class="sheet">${items.map((it, i) =>
-         `<li><label class="num" for="a${i}">${i + 1}</label><input id="a${i}" data-i="${i}" value="${esc(answers[i])}" placeholder="${esc(catOf(it).noun)}" autocomplete="off" autocapitalize="off" spellcheck="false"></li>`).join('')}</ol>
+         `<li><label class="num" for="a${i}">${i + 1}</label><input id="a${i}" data-i="${i}" value="${esc(answers[i])}" placeholder="${esc(catOf(it).noun)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></li>`).join('')}</ol>
        <button type="button" class="link" id="quit">Quit this test</button>`;
     paint(items.map((it, i) => ({ it, cls: 'numbered', num: i + 1, say: 'Point ' + (i + 1) })));
     spotlight(null);
@@ -432,7 +486,7 @@ function renderTest() {
     const typed = answers[i].trim();
     if (!typed) return '<p class="yours">Left blank</p>';
     if (marks[i] === 'right') return '';
-    const note = marks[i] === 'close' ? ' (spelling)' : marks[i] === 'short' ? ' (write it as shown above)' : '';
+    const note = marks[i] === 'close' ? ' (exact spelling above)' : marks[i] === 'short' ? ' (full name above)' : '';
     return `<p class="yours">You wrote: ${esc(typed)}${note}</p>`;
   };
   panel.innerHTML = catsHtml(true) +
@@ -448,6 +502,7 @@ function renderTest() {
 
 function startTest(items) {
   test = { items: shuffle(items), answers: items.map(() => ''), marks: null };
+  keepTest();
   renderTest();
   $('#a0').focus();
   spotlight(test.items[0], false, 'near');
@@ -460,6 +515,7 @@ function drawFilled() {
 function handIn() {
   test.marks = test.items.map((it, i) => judge(it, test.answers[i]));
   test.items.forEach((it, i) => record(it, earns(test.marks[i])));
+  keepTest();
   renderTest();
   panel.scrollTop = 0;
   $('#newtest').focus();
@@ -473,22 +529,24 @@ const modes = $('.modes'), modeButtons = modes.querySelectorAll('button');
 
 // Put the dark pill under whichever button of a segmented control is pressed. A press makes it glide there
 // (the .slide class turns the transition on); first placement and re-fitting after a resize are instant.
-function movePill(group, glide) {
+function movePill(group, slide) {
   if (!group) return;
   const on = group.querySelector('[aria-pressed="true"]'), pill = group.querySelector('.pill');
   if (!on) return;
-  pill.classList.toggle('slide', !!glide);
-  pill.style.width = on.offsetWidth + 'px';
-  pill.style.transform = `translateX(${on.offsetLeft}px)`;
+  const width = on.offsetWidth + 'px', transform = `translateX(${on.offsetLeft}px)`;
+  if (pill.style.width === width && pill.style.transform === transform) return;   // already there, or on its way
+  pill.classList.toggle('slide', !!slide);
+  pill.style.width = width;
+  pill.style.transform = transform;
   pill.getBoundingClientRect();   // settle the position before the transition can be switched back on
 }
 
 // A mock test stays in memory when you look at another mode, so a stray click can't lose it.
-function setMode(m) {
+function setMode(m, slide = true) {
   mode = store.mode = m;
   save();
   modeButtons.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
-  movePill(modes, true);
+  movePill(modes, slide);
   RENDER[m]();
 }
 
@@ -533,7 +591,7 @@ panel.addEventListener('click', e => {
   else if (b.classList.contains('row')) studyPick(byId(b.dataset.id));
   else if (b.id === 'start') startTest(shuffle(selected()).slice(0, +$('#count').value));
   else if (b.id === 'retest') startTest(test.items.filter((it, i) => !earns(test.marks[i])));
-  else if (b.id === 'newtest' || (b.id === 'quit' && (!testUnderWay() || confirmed(b, 'Lose your answers?')))) { test = null; renderTest(); }
+  else if (b.id === 'newtest' || (b.id === 'quit' && (!testUnderWay() || confirmed(b, 'Lose your answers?')))) { test = null; keepTest(); renderTest(); }
   else if (b.id === 'handin') {
     const blank = test.answers.filter(a => !a.trim()).length;
     if (!blank || confirmed(b, `Hand in with ${blank} blank?`)) handIn();
@@ -542,12 +600,13 @@ panel.addEventListener('click', e => {
 
 panel.addEventListener('submit', e => {
   e.preventDefault();
+  if (answered) return nextQuestion();
   const typed = $('#typed').value.trim();
   if (typed) answer(typed, judge(cur, typed));
 });
 
 panel.addEventListener('input', e => {
-  if (test && e.target.dataset.i != null) { test.answers[e.target.dataset.i] = e.target.value; drawFilled(); }
+  if (test && e.target.dataset.i != null) { test.answers[e.target.dataset.i] = e.target.value; drawFilled(); keepTest(); }
 });
 
 // Point at a study row, or step onto an answer line, and its point lights up.
@@ -601,7 +660,8 @@ $('#zreset').addEventListener('click', () => glide(300).call(zoom.transform, d3.
 // actually visible (style.css uses these on small screens only), so the map and the line being typed stay in view.
 const viewport = window.visualViewport;
 function fitScreen() {
-  if (viewport) {
+  // Pinching the page to zoom also shrinks the visible area; that is not the keyboard, so leave the layout alone.
+  if (viewport && viewport.scale < 1.01) {
     const html = document.documentElement;
     html.style.setProperty('--app-h', viewport.height + 'px');
     html.style.setProperty('--app-top', viewport.offsetTop + 'px');
@@ -614,16 +674,17 @@ function fitScreen() {
   const typingIn = document.activeElement;
   if (typingIn && typingIn.tagName === 'INPUT' && panel.contains(typingIn)) typingIn.scrollIntoView({ block: 'nearest' });
 }
+$('.zoom').addEventListener('click', () => { watching = null; });   // his own zooming: stop steering the map back
 window.addEventListener('resize', fitScreen);
 if (viewport) { viewport.addEventListener('resize', fitScreen); viewport.addEventListener('scroll', fitScreen); }
-document.fonts.ready.then(fitScreen);   // button and label widths change once Inter has loaded
-// A reload forgets a mock test that is being written, so ask first.
-window.addEventListener('beforeunload', e => {
-  if (testUnderWay()) { e.preventDefault(); e.returnValue = ''; }
-});
+// Button and label widths change once Inter has loaded.
+document.fonts.ready.then(() => { ITEMS.forEach(it => { it.labelWidth = 0; }); fitScreen(); });
 
 drawProgress();
 drawMap();
-setMode(mode);
+setMode(mode, false);
 fitScreen();
+
+// On the web, keep a copy for when there is no signal (see sw.js). Opened from disk it is already all local.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

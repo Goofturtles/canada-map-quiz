@@ -32,6 +32,7 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }   /* stops iPhones inflating text when turned sideways */
 body {
   margin: 0;
   display: flex;
@@ -343,15 +344,16 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .sheet.marked li.right .yours { color: var(--muted); }
 
 /* ── Phones ──
-   The page is pinned to the part of the screen that is really visible (app.js keeps --app-h and --app-top up to
-   date, which matters once the keyboard is up), with the map on top and the panel scrolling underneath it. */
-@media (max-width: 860px) {
+   Narrow screens, and short ones (a big phone on its side is wider than 860px). The page is pinned to the part of
+   the screen that is really visible (app.js keeps --app-h and --app-top up to date, which matters once the keyboard
+   is up), with the map on top and the panel scrolling underneath it. */
+@media (max-width: 860px), (max-height: 500px) {
   body { position: fixed; top: var(--app-top, 0px); left: 0; right: 0; height: var(--app-h, 100dvh); }
   .top { gap: 8px 12px; padding: 8px 12px; touch-action: manipulation; }
   h1 { font-size: 15px; }
   .progress { font-size: 13px; }
   .modes { order: 3; width: 100%; }
-  .modes button { flex: 1; padding: 8px 4px; }
+  .modes button { flex: 1; padding: 11px 4px; }
   .layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(140px, 44%) minmax(0, 1fr); }
   .panel {
     padding: 12px 14px 24px;
@@ -366,17 +368,26 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   /* Fields under 16px make an iPhone zoom the whole page when you tap them. */
   #typed, .sheet input, .field select { font-size: 16px; }
   /* Bigger targets for fingers. */
-  .chip span { padding: 7px 12px; }
-  .link { padding: 8px 0; }
-  .cats-box summary { padding: 6px 0; }
+  .seg button { padding: 10px 14px; }
+  .chip span { padding: 10px 13px; }
+  .link { padding: 10px 0; }
+  .switch { min-height: 40px; margin: 6px 0; }
+  .cats-box summary { padding: 10px 0; }
   .row { padding: 9px 10px; }
   .test-head { top: -12px; margin: 0 -14px; padding: 8px 14px; }
 }
 
 /* A phone on its side: map and panel side by side again, in less room. */
-@media (max-width: 860px) and (min-aspect-ratio: 5/4) {
+@media (max-width: 860px) and (min-aspect-ratio: 5/4), (max-height: 500px) {
   .modes { order: 0; width: auto; }
-  .modes button { flex: none; padding: 6px 12px; }
+  .modes button { flex: none; padding: 8px 12px; }
   .layout { grid-template-columns: minmax(0, 1fr) minmax(250px, 44%); grid-template-rows: minmax(0, 1fr); }
   .panel { border-top: 0; border-left: 1px solid var(--line); }
+  /* Sideways with the keyboard up there are only a few lines of room, so the hand-in bar scrolls away. */
+  .typing .test-head { position: static; }
+}
+
+/* With a finger you pinch to zoom, so only "Whole map" stays and less of the map is covered. */
+@media (pointer: coarse) {
+  #zin, #zout { display: none; }
 }

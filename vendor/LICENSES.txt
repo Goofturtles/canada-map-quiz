@@ -1,4 +1,4 @@
-Third-party work shipped in this folder, with the notices their licences ask to travel with them.
+Third-party work shipped with this project, with the notices their licences ask to travel with them.
 
 ================================================================
 D3 7.9.0  (vendor/d3.min.js)  https://d3js.org
