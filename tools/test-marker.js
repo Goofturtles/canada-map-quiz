@@ -38,16 +38,16 @@ for (const it of ITEMS) for (const o of ITEMS) {
 }
 
 // 4. Abbreviations, short forms and small spelling slips get the mark.
-const OK = [['bc', 'BC'], ['bc', 'B.C.'], ['pe', 'PEI'], ['pe', 'P.E.I.'], ['sk', 'Sask'], ['nt', 'NWT'], ['nl', 'Newfoundland'], ['nl', 'NL'], ['yt', 'Yukon Territory'],
+const OK = [['bc', 'BC'], ['bc', 'B.C.'], ['bc', 'B. C.'], ['pe', 'PEI'], ['pe', 'P.E.I.'], ['pe', 'P. E. I.'], ['nt', 'N. W. T.'], ['usa', 'U. S. A.'], ['sk', 'Sask'], ['nt', 'NWT'], ['nl', 'Newfoundland'], ['nl', 'NL'], ['yt', 'Yukon Territory'],
   ['great-bear', 'Bear'], ['great-bear', 'Bear Lake'], ['great-bear', 'Great Bear'], ['great-bear', 'Great Bear L.'], ['great-slave', 'Slave Lake'], ['great-slave', 'great slave'],
-  ['superior', 'Superior'], ['superior', 'L. Superior'], ['huron', 'Huron'], ['erie', 'L. Erie'], ['lake-winnipeg', 'Winnipeg'], ['lake-ontario', 'Ontario'],
-  ['fraser', 'Fraser'], ['fraser', 'Fraser R.'], ['mackenzie', 'McKenzie River'], ['ottawa-river', 'Ottawa'], ['ottawa-river', 'Ottawa R.'], ['st-lawrence', 'St Lawrence'], ['st-lawrence', 'Saint Lawrence River'],
+  ['superior', 'Superior'], ['superior', 'L. Superior'], ['huron', 'Huron'], ['erie', 'L. Erie'], ['erie', 'Lk. Erie'], ['lake-winnipeg', 'Winnipeg'], ['lake-ontario', 'Ontario'],
+  ['fraser', 'Fraser'], ['fraser', 'Fraser R.'], ['fraser', 'Fraser Riv.'], ['gulf-st-lawrence', 'G. of St. Lawrence'], ['davis', 'Davis Straits'], ['mackenzie', 'McKenzie River'], ['ottawa-river', 'Ottawa'], ['ottawa-river', 'Ottawa R.'], ['st-lawrence', 'St Lawrence'], ['st-lawrence', 'Saint Lawrence River'],
   ['gulf-st-lawrence', 'St. Lawrence'], ['gulf-alaska', 'Alaska'], ['fundy', 'Fundy'], ['hudson-bay', 'Hudson'], ['hudson-bay', 'Hudsons Bay'], ['hudson-strait', 'Hudson'], ['hudson-strait', 'Hudson Straight'], ['bering', 'Bering Str.'],
   ['sk', 'Saskatchewen'], ['winnipeg', 'Winnepeg'], ['fredericton', 'Frederickton'], ['iqaluit', 'Iqualuit'], ['charlottetown', 'Charlotetown'], ['manitoulin', 'Manatoulin'], ['athabasca', 'Athabaska'],
   ['ellesmere', 'Ellesmer'], ['nu', 'Nunavit'], ['ns', 'Novia Scotia'], ['halifax', 'Hailfax'], ['regina', 'Regnia'], ['bc', 'British Colombia'], ['nt', 'Northwest Territory'],
   ['greenland', 'Greenland'], ['greenland', 'Denmark'], ['spm', 'France'], ['spm', 'St Pierre and Miquelon'], ['usa', 'USA'], ['usa', 'U.S.'], ['usa', 'America'], ['usa', 'United States'],
   ['usa-alaska', 'Alaska'], ['usa-alaska', 'USA'], ['usa-alaska', 'Alaska, United States'],
-  ['quebec-city', 'Quebec'], ['st-johns', 'St Johns'], ['victoria-island', 'Victoria'], ['vancouver-island', 'Vancouver'], ['vancouver-island', 'Vancouver Is.'], ['baffin', 'Baffin Is.'],
+  ['quebec-city', 'Quebec'], ['st-johns', 'St Johns'], ['victoria-island', 'Victoria'], ['vancouver-island', 'Vancouver'], ['vancouver-island', 'Vancouver Is.'], ['baffin', 'Baffin Is.'], ['baffin', 'Baffin Isl.'], ['haida-gwaii', 'Queen Charlotte Islands'],
   ['cape-breton', 'Cape Breton'], ['haida-gwaii', 'Hada Gwaii'], ['labrador-sea', 'Labrador'], ['beaufort', 'Beaufort'], ['arctic', 'Arctic'], ['pacific', 'Pacific Oc.'], ['thunder-bay', 'Thunder Bay']];
 for (const [id, typed] of OK) expect(id, typed, 'ok');
 
@@ -58,7 +58,7 @@ const WRONG = [['hudson-bay', 'Hudson Strait'], ['hudson-strait', 'Hudson Bay'],
   ['labrador-sea', 'Beaufort'], ['davis', 'Bering'], ['nu', 'Yukon'], ['nb', 'NS'], ['ns', 'NL'], ['ns', 'NB'], ['nt', 'NU'], ['banks', 'Baffin'],
   ['vancouver-island', 'Victoria'], ['victoria', 'Vancouver'], ['victoria', 'Victoria Island'], ['vancouver', 'Vancouver Island'], ['vancouver', 'Vancouver I.'],
   ['sk', 'Saskatoon'], ['saskatoon', 'Sask'], ['regina', 'Saskatoon'], ['qc', 'Quebec City'], ['winnipeg', 'Lake Winnipeg'], ['winnipeg', 'L. Winnipeg'], ['ottawa', 'Ottawa River'], ['ottawa', 'Ottawa R.'],
-  ['st-lawrence', 'Gulf of St. Lawrence'], ['gulf-st-lawrence', 'St. Lawrence River'], ['gulf-st-lawrence', 'St. Lawrence R.'], ['superior', 'Lake'], ['great-bear', 'Great Lake'],
+  ['st-lawrence', 'Gulf of St. Lawrence'], ['st-lawrence', 'G. of St. Lawrence'], ['usa-alaska', 'G. of Alaska'], ['erie', 'Erie Riv.'], ['fraser', 'Lk. Fraser'], ['bc', 'C'], ['bc', 'B'], ['gulf-st-lawrence', 'St. Lawrence River'], ['gulf-st-lawrence', 'St. Lawrence R.'], ['superior', 'Lake'], ['great-bear', 'Great Lake'],
   ['bc', ''], ['bc', '   '], ['usa', 'Canada'], ['usa', 'Alaska'], ['russia', 'USA'], ['iceland', 'Greenland'], ['mb', 'Manitoulin'], ['on', 'Ottawa'], ['pe', 'Charlottetown'], ['halifax', 'Nova Scotia']];
 for (const [id, typed] of WRONG) expect(id, typed, 'wrong');
 

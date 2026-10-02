@@ -14,7 +14,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(fetch(e.request).then(response => {
     if (response.ok) {
       const copy = response.clone();

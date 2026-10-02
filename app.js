@@ -32,7 +32,8 @@ const byId = id => ITEMS.find(it => it.id === id);
 // Capitals, accents, full stops and apostrophes never matter.
 const norm = s => s.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
   .replace(/&/g, ' and ').replace(/['\u2018\u2019\u02bc\u00b4\u2032`.]/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
-  .replace(/\bsaint\b/g, 'st').replace(/^the /, '');
+  .replace(/\bsaint\b/g, 'st').replace(/^the /, '')
+  .replace(/\b([a-z]) (?=[a-z]\b)/g, '$1');   // "B. C." and "P. E. I." read as bc and pei
 
 // Words that say what kind of thing it is. Leaving one out is fine ("Superior", "Fraser"), and so is leaving out
 // "Great" ("Bear Lake"). Writing the WRONG kind is not: "Hudson Strait" is not Hudson Bay.
@@ -40,7 +41,7 @@ const KINDS = ['lake', 'river', 'island', 'bay', 'sea', 'ocean', 'strait', 'gulf
 const FILLER = ['great', 'of', 'the', ...KINDS];
 // Common ways of writing a kind word short, or wrong. ("st" is not here: that is Saint.)
 const KIND_FOR = { l: 'lake', lk: 'lake', r: 'river', riv: 'river', i: 'island', is: 'island', isl: 'island', islands: 'island',
-  b: 'bay', oc: 'ocean', str: 'strait', straight: 'strait', straits: 'strait' };
+  b: 'bay', g: 'gulf', oc: 'ocean', str: 'strait', straight: 'strait', straits: 'strait' };
 const words = s => norm(s).split(' ').filter(Boolean).map(w => KIND_FOR[w] || w);
 const core = s => words(s).filter(w => !FILLER.includes(w)).join(' ');
 const kindsIn = s => words(s).filter(w => KINDS.includes(w));
@@ -107,7 +108,7 @@ function readStore() {
 function save() {
   try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* private window: just don't remember */ }
 }
-// "Nailed" means right twice in a row.
+// "Nailed" means typed right twice in a row. Multiple choice never earns it, though a wrong pick still loses it.
 const nailed = it => store.streak[it.id] >= 2;
 function record(it, right) {
   store.streak[it.id] = right ? (store.streak[it.id] || 0) + 1 : 0;
@@ -404,7 +405,7 @@ function answer(given, verdict) {
     round.missed.add(cur);
     queue.splice(Math.min(queue.length, 3), 0, cur);   // comes back in a few questions
   } else if (!round.missed.has(cur)) round.firstTry++;
-  record(cur, right);
+  if (store.typing || !right) record(cur, right);
 
   const onward = queue.length ? 'Next' : 'Finish';
   panel.querySelectorAll('.opt, #skip').forEach(el => { el.disabled = true; });
@@ -657,6 +658,10 @@ $('#reset').addEventListener('click', e => {
   save();
   drawProgress();
   if (mode === 'practice') renderPractice();
+});
+
+$('#reset').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.repeat) e.preventDefault();
 });
 
 $('#zin').addEventListener('click', () => glide(200).call(zoom.scaleBy, 1.7));
