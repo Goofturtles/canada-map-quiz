@@ -8,10 +8,11 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='10' fill='%23d0202e' stroke='%23fff' stroke-width='4'/%3E%3C/svg%3E">
   <script>
     // Before the first paint, so a dark page never flashes white: the saved choice, or else what the device prefers.
-    try {
-      var theme = (JSON.parse(localStorage.getItem('canada-map:v1')) || {}).theme;
+    (function () {
+      var theme;
+      try { theme = (JSON.parse(localStorage.getItem('canada-map:v1')) || {}).theme; } catch (e) { /* no storage: use the device */ }
       if (theme === 'dark' || (!theme && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.dataset.theme = 'dark';
-    } catch (e) {}
+    })();
   </script>
   <link rel="stylesheet" href="style.css">
 </head>
