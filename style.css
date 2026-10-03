@@ -28,6 +28,51 @@
   --water-ink: #1c5a85;
   --land: #fdfcf8;
   --foreign: #e7e5df;
+  /* The rest are the same idea in both themes: lines on the map, highlights, and what sits on a filled shape. */
+  --bad: #a3141f;
+  --border: #4f5761;
+  --water-line: #7697ad;
+  --foreign-line: #b4b0a6;
+  --hl-land: #f9d9da;
+  --hl-foreign: #f0cfd0;
+  --hl-lake: #ee9aa0;
+  --field-line: #7d8590;
+  --on-ink: #fff;        /* text on an ink-filled button */
+  --on-mark: #fff;       /* the number on a coloured point */
+  --halo: #fff;          /* the edge that lifts points and names off the map */
+  --dot-face: #fff;      /* the inside of a numbered point */
+  --pin-face: rgba(255, 255, 255, 0.8);
+}
+
+/* Dark mode. index.html sets data-theme before the first paint: his saved choice, or else what the device prefers. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e7e9ec;
+  --muted: #9ba4ae;
+  --line: #2e343b;
+  --bg: #0e1114;
+  --panel: #171b1f;
+  --accent: #f0525b;
+  --good: #4cc38a;
+  --good-bg: #133022;
+  --bad: #ff8f95;
+  --bad-bg: #3b171a;
+  --water: #15212b;
+  --water-ink: #86bde6;
+  --water-line: #3d5a70;
+  --land: #262b31;
+  --border: #747d87;
+  --foreign: #1b1f23;
+  --foreign-line: #3a4047;
+  --hl-land: #55292e;
+  --hl-foreign: #47262a;
+  --hl-lake: #a3414a;
+  --field-line: #6f7884;
+  --on-ink: #101316;
+  --on-mark: #101316;
+  --halo: #101316;
+  --dot-face: #171b1f;
+  --pin-face: rgba(16, 19, 22, 0.75);
 }
 
 * { box-sizing: border-box; }
@@ -71,7 +116,7 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   white-space: nowrap;
   transition: color 0.25s ease;
 }
-.modes button[aria-pressed="true"], .seg button[aria-pressed="true"] { color: #fff; }
+.modes button[aria-pressed="true"], .seg button[aria-pressed="true"] { color: var(--on-ink); }
 /* The dark pill behind the pressed button. app.js sets its width and position; .slide makes later moves glide. */
 .pill {
   position: absolute;
@@ -100,6 +145,19 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 }
 .link:hover:not(:disabled) { color: var(--ink); }
 .link:disabled { opacity: 0.45; }
+/* The dark mode switch. */
+.icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted);
+}
+.icon:hover, .icon[aria-pressed="true"] { color: var(--ink); border-color: var(--muted); }
 
 /* ── Layout ── */
 .layout {
@@ -133,19 +191,19 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 
 /* ── Map ── */
 #map path { vector-effect: non-scaling-stroke; }
-.foreign path { fill: var(--foreign); stroke: #b4b0a6; stroke-width: 0.6; }
-.provinces path { fill: var(--land); stroke: #4f5761; stroke-width: 0.8; }
-.lakes path { fill: var(--water); stroke: #7697ad; stroke-width: 0.5; }
-.rivers path { fill: none; stroke: #7697ad; stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
-.foreign path.hl { fill: #f0cfd0; }
-.provinces path.hl { fill: #f9d9da; }
-.lakes path.hl { fill: #ee9aa0; stroke: var(--accent); }
+.foreign path { fill: var(--foreign); stroke: var(--foreign-line); stroke-width: 0.6; }
+.provinces path { fill: var(--land); stroke: var(--border); stroke-width: 0.8; }
+.lakes path { fill: var(--water); stroke: var(--water-line); stroke-width: 0.5; }
+.rivers path { fill: none; stroke: var(--water-line); stroke-width: 1; stroke-linecap: round; stroke-linejoin: round; }
+.foreign path.hl { fill: var(--hl-foreign); }
+.provinces path.hl { fill: var(--hl-land); }
+.lakes path.hl { fill: var(--hl-lake); stroke: var(--accent); }
 .rivers path.hl { stroke: var(--accent); stroke-width: 3; }
 
 /* The pin he puts down in Place mode. */
 .pin { display: none; pointer-events: none; }
 .pin.show { display: block; }
-.pin circle { fill: rgba(255, 255, 255, 0.8); stroke: var(--ink); stroke-width: 2.5; }
+.pin circle { fill: var(--pin-face); stroke: var(--ink); stroke-width: 2.5; }
 .pin path { fill: none; stroke: var(--ink); stroke-width: 2; }
 .pin.ok circle, .pin.ok path { stroke: var(--good); }
 .pin.off circle, .pin.off path { stroke: var(--accent); }
@@ -154,7 +212,7 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .marker.show { display: block; cursor: pointer; }
 .marker:focus { outline: none; }
 .marker .hit { fill: transparent; }
-.marker .dot { fill: var(--ink); stroke: #fff; stroke-width: 1.5; }
+.marker .dot { fill: var(--ink); stroke: var(--halo); stroke-width: 1.5; }
 .marker.water .dot { fill: var(--water-ink); }
 .marker .ring { pointer-events: none; fill: none; stroke: var(--accent); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; }
 .marker .num { display: none; text-anchor: middle; font: 700 10px Inter, system-ui, sans-serif; fill: var(--ink); pointer-events: none; }
@@ -162,7 +220,7 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   display: none;
   font: 600 11.5px Inter, system-ui, sans-serif;
   fill: var(--ink);
-  stroke: #fff;
+  stroke: var(--halo);
   stroke-width: 3px;
   stroke-linejoin: round;
   paint-order: stroke;
@@ -173,16 +231,16 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .marker.named .label { display: block; }
 .marker .label.crowded { visibility: hidden; }
 
-.marker.numbered .dot { r: 9px; fill: #fff; stroke: var(--ink); }
+.marker.numbered .dot { r: 9px; fill: var(--dot-face); stroke: var(--ink); }
 .marker.numbered .num { display: block; }
-.marker.active .dot { fill: var(--accent); stroke: #fff; r: 7px; }
+.marker.active .dot { fill: var(--accent); stroke: var(--halo); r: 7px; }
 .marker.numbered.active .dot { r: 10px; }
-.marker.numbered.active .num { fill: #fff; }
+.marker.numbered.active .num { fill: var(--on-mark); }
 .marker.active .ring { animation: pulse 1.5s ease-out infinite; }
-.marker.right .dot { fill: var(--good); stroke: #fff; }
+.marker.right .dot { fill: var(--good); stroke: var(--halo); }
 /* Shown answers get a dark edge as well as the red, so they don't differ from right ones by colour alone. */
 .marker.wrong .dot { fill: var(--accent); stroke: var(--ink); stroke-width: 2; }
-.marker.right .num, .marker.wrong .num { fill: #fff; }
+.marker.right .num, .marker.wrong .num { fill: var(--on-mark); }
 .marker:focus-visible .dot { stroke: var(--ink); stroke-width: 3.5; }
 @keyframes pulse {
   from { transform: scale(1); opacity: 0.9; }
@@ -233,7 +291,7 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   font-size: 13px;
   color: var(--muted);
 }
-.chip input:checked + span { border-color: var(--ink); background: var(--ink); color: #fff; }
+.chip input:checked + span { border-color: var(--ink); background: var(--ink); color: var(--on-ink); }
 .chip input:focus-visible + span { outline: 2px solid var(--ink); outline-offset: 2px; }
 .chip input:disabled { cursor: default; }
 .chip input:disabled + span { opacity: 0.5; }
@@ -244,14 +302,14 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .tip { margin: 10px 0; color: var(--muted); font-size: 14px; }
 .seg { width: fit-content; }
 .field { display: flex; align-items: center; gap: 10px; margin: 14px 0; font-size: 14px; }
-.field select { padding: 6px 8px; border: 1px solid #7d8590; border-radius: 7px; background: var(--panel); }
+.field select { padding: 6px 8px; border: 1px solid var(--field-line); border-radius: 7px; background: var(--panel); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
 .primary, .plain {
   padding: 9px 16px;
   border: 1px solid var(--ink);
   border-radius: 8px;
   background: var(--ink);
-  color: #fff;
+  color: var(--on-ink);
   font-weight: 600;
 }
 .plain { background: var(--panel); color: var(--ink); border-color: var(--line); }
@@ -300,13 +358,13 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   color: var(--muted);
 }
 .opt.right { border-color: var(--good); background: var(--good-bg); color: var(--good); }
-.opt.wrong { border-color: var(--accent); background: var(--bad-bg); color: #a3141f; }
+.opt.wrong { border-color: var(--accent); background: var(--bad-bg); color: var(--bad); }
 #answer { display: flex; gap: 8px; margin-bottom: 8px; }
 #typed, .sheet input {
   flex: 1;
   min-width: 0;
   padding: 9px 11px;
-  border: 1px solid #7d8590;
+  border: 1px solid var(--field-line);
   border-radius: 8px;
   background: var(--panel);
 }
@@ -315,7 +373,7 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 #feedback { margin-top: 16px; }
 .verdict { font-weight: 650; }
 .verdict.right { color: var(--good); }
-.verdict.wrong { color: #a3141f; }
+.verdict.wrong { color: var(--bad); }
 .answer { font-size: 18px; font-weight: 650; letter-spacing: -0.01em; }
 .hint { color: var(--muted); font-size: 14px; }
 #feedback .primary { margin-top: 14px; }
@@ -347,9 +405,9 @@ h1 { font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
 .sheet.marked li { align-items: flex-start; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
 .sheet.marked li.wrong { background: var(--bad-bg); }
 .sheet.marked li.right .num { color: var(--good); }
-.sheet.marked li.wrong .num { color: #a3141f; }
+.sheet.marked li.wrong .num { color: var(--bad); }
 .sheet.marked .answer { font-size: 15px; }
-.yours { color: #7a1a22; font-size: 13px; }
+.yours { color: var(--bad); font-size: 13px; }
 .sheet.marked li.right .yours { color: var(--muted); }
 
 /* ── Phones ──

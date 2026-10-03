@@ -13,6 +13,8 @@ It covers 76 points: the provinces and territories, capital cities, five other c
 - **Place** is the other way round: it asks a question in words ("Which bay cuts into the north of Quebec?") and you type the name and click where it is on the map.
 - **Mock test** is the closest to the real thing: numbered points on the map and an answer sheet. Nothing is marked until you hand it in.
 
+There is a dark mode: it follows your device, and the half-moon button at the top switches it.
+
 Typed answers are marked kindly: abbreviations ("BC", "PEI"), short forms ("Superior", "Bear Lake") and small spelling slips all count, as long as it is clear which thing you mean. The full, correctly spelled name is always shown back to you.
 
 ## Running it

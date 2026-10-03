@@ -815,6 +815,16 @@ $('#reset').addEventListener('click', e => {
   if (mode === 'practice') renderPractice();
 });
 
+// Dark mode follows the device until he presses the switch; after that his choice is remembered.
+const themeButton = $('#theme'), isDark = () => document.documentElement.dataset.theme === 'dark';
+themeButton.setAttribute('aria-pressed', isDark());
+themeButton.addEventListener('click', () => {
+  store.theme = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = store.theme;
+  themeButton.setAttribute('aria-pressed', isDark());
+  save();
+});
+
 $('#reset').addEventListener('keydown', e => {
   if (e.key === 'Enter' && e.repeat) e.preventDefault();
 });
